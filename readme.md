@@ -27,10 +27,9 @@ Follow these steps to set up the project locally:
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/yourusername/aws-automation-script.git
+   git clone https://github.com/barmoshe/aws-automation.git
    cd aws-automation-script
    ``` 
-
 2. **Install Dependencies**
 
    ```bash

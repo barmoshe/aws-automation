@@ -5,5 +5,6 @@ export const choices = [
   "4. SSH into the machine",
   "5. Attach an EBS volume to the machine",
   "6. Create a Snapshot",
+  "7. Create Launch Template",  // <-- New option added
   "Exit",
 ];
