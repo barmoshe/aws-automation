@@ -1,6 +1,7 @@
 # AWS Automation Script
 
 Welcome to the **AWS Automation Script**, a Node.js CLI tool designed to streamline and automate common AWS tasks such as creating key pairs, launching EC2 instances, configuring security groups, attaching EBS volumes, and creating snapshots.
+![sshgif](https://github.com/user-attachments/assets/37788e5e-8620-410c-834e-b995a474c931)
 
 ## Features
 
