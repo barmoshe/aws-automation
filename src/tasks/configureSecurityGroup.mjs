@@ -1,19 +1,16 @@
-import inquirer from "inquirer";
-import chalk from "chalk";
-import ora from "ora";
-import { AwsCliError } from "../helpers/errorHandlers.js";
-import { getVPCs, getSecurityGroups } from "../helpers/awsHelpers.js";
-import { $, question } from "zx";
+import inquirer from 'inquirer';
+import { $, AwsCliError, getVPCs } from '../utils/awsHelpers.mjs';
+import { isValidCIDR } from '../utils/validators.mjs';
 
-export default async function configureSecurityGroup() {
-  console.log(chalk.cyan("\n=== Configure Security Group ==="));
+export async function configureSecurityGroup() {
+  console.log("\n=== Configure Security Group ===");
 
   try {
     // List available VPCs
     let vpcs = await getVPCs();
 
     if (vpcs.length === 0) {
-      console.log(chalk.red("No VPCs found. Please create a VPC first."));
+      console.log("No VPCs found. Please create a VPC first.");
       return;
     }
 
@@ -22,7 +19,7 @@ export default async function configureSecurityGroup() {
       {
         type: "list",
         name: "vpcId",
-        message: chalk.yellow("Select a VPC:"),
+        message: "Select a VPC:",
         choices: vpcs.map((vpc) => ({
           name: `${vpc.Name || "Unnamed VPC"} (${vpc.VpcId})`,
           value: vpc.VpcId,
@@ -35,7 +32,7 @@ export default async function configureSecurityGroup() {
       {
         type: "input",
         name: "securityGroupName",
-        message: chalk.yellow("Enter the Security Group name:"),
+        message: "Enter the Security Group name:",
         validate: (input) =>
           input ? true : "Security Group name cannot be empty.",
       },
@@ -46,9 +43,7 @@ export default async function configureSecurityGroup() {
       {
         type: "input",
         name: "homeIpCidr",
-        message: chalk.yellow(
-          "Enter your Home IP CIDR (e.g., 203.0.113.0/32):"
-        ),
+        message: "Enter your Home IP CIDR (e.g., 203.0.113.0/32):",
         validate: (input) =>
           isValidCIDR(input)
             ? true
@@ -57,9 +52,7 @@ export default async function configureSecurityGroup() {
       {
         type: "input",
         name: "campusIpCidr",
-        message: chalk.yellow(
-          "Enter your Campus IP CIDR (e.g., 198.51.100.0/32):"
-        ),
+        message: "Enter your Campus IP CIDR (e.g., 198.51.100.0/32):",
         validate: (input) =>
           isValidCIDR(input)
             ? true
@@ -68,17 +61,17 @@ export default async function configureSecurityGroup() {
     ]);
 
     // Create Security Group
-    const spinner = ora("Creating Security Group...").start();
-    let securityGroupId = await $`aws ec2 create-security-group \
+    console.log("\nCreating Security Group...");
+    let securityGroupIdResult = await $`aws ec2 create-security-group \
       --group-name ${securityGroupName} \
       --description "SSH access from home and campus" \
       --vpc-id ${vpcId} \
       --query 'GroupId' \
       --output text`;
-    securityGroupId = securityGroupId.stdout.trim();
-    spinner.succeed(chalk.green(`Security Group ID: ${securityGroupId}`));
+    let securityGroupId = securityGroupIdResult.stdout.trim();
+    console.log(`Security Group ID: ${securityGroupId}`);
 
-    console.log(chalk.yellow("\nAuthorizing inbound SSH access..."));
+    console.log("\nAuthorizing inbound SSH access...");
 
     // Authorize Home IP
     await $`aws ec2 authorize-security-group-ingress \
@@ -94,24 +87,8 @@ export default async function configureSecurityGroup() {
       --port 22 \
       --cidr ${campusIpCidr}`;
 
-    console.log(
-      chalk.green("Inbound SSH access authorized for specified IPs.")
-    );
+    console.log("Inbound SSH access authorized for specified IPs.");
   } catch (error) {
-    throw new AwsCliError(
-      "Error configuring Security Group",
-      error.stderr || error.message
-    );
-  }
-}
-
-// Reuse the CIDR validation function
-function isValidCIDR(cidr) {
-  try {
-    const [ip, prefix] = cidr.split("/");
-    if (!prefix || isNaN(prefix) || prefix < 0 || prefix > 32) return false;
-    return net.isIP(ip) !== 0;
-  } catch (error) {
-    return false;
+    throw new AwsCliError("Error configuring Security Group", error.stderr || error.message);
   }
 }

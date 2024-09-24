@@ -1,18 +1,33 @@
 {
   "name": "aws-automation",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "A CLI tool for automating AWS tasks such as managing EC2 instances, security groups, and more.",
+  "keywords": [
+    "aws",
+    "cli",
+    "automation",
+    "ec2",
+    "security-group",
+    "ebs",
+    "snapshot"
+  ],
+  "author": "Bar Moshe <1barmoshe1@gmail.com>",
+  "license": "MIT",
+  "main": "bin/cli.mjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bin/cli.mjs"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "chalk": "^5.3.0",
     "inquirer": "^11.0.2",
-    "ora": "^8.1.0",
     "zx": "^8.1.8"
-  }
+  },
+  "bin": {
+    "aws-automation": "./bin/cli.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "LICENSE"
+  ]
 }

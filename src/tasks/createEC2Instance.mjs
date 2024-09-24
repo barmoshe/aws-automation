@@ -1,25 +1,16 @@
-import inquirer from "inquirer";
-import chalk from "chalk";
-import ora from "ora";
-import { AwsCliError, ValidationError } from "../helpers/errorHandlers.js";
-import {
-  getVPCs,
-  getSubnets,
-  getKeyPairs,
-  getSecurityGroups,
-  getLatestAmiIdForOs,
-} from "../helpers/awsHelpers.js";
-import { $, question } from "zx";
+import inquirer from 'inquirer';
+import fs from 'fs';
+import { $, AwsCliError, getVPCs, getSubnets, getKeyPairs, getSecurityGroups, getLatestAmiIdForOs } from '../utils/awsHelpers.mjs';
 
-export default async function createEC2Instance() {
-  console.log(chalk.cyan("\n=== Create EC2 Instance ==="));
+export async function createEC2Instance() {
+  console.log("\n=== Create EC2 Instance ===");
 
   try {
     // List available VPCs
     let vpcs = await getVPCs();
 
     if (vpcs.length === 0) {
-      console.log(chalk.red("No VPCs found. Please create a VPC first."));
+      console.log("No VPCs found. Please create a VPC first.");
       return;
     }
 
@@ -28,7 +19,7 @@ export default async function createEC2Instance() {
       {
         type: "list",
         name: "vpcId",
-        message: chalk.yellow("Select a VPC:"),
+        message: "Select a VPC:",
         choices: vpcs.map((vpc) => ({
           name: `${vpc.Name || "Unnamed VPC"} (${vpc.VpcId})`,
           value: vpc.VpcId,
@@ -41,7 +32,7 @@ export default async function createEC2Instance() {
 
     if (subnets.length === 0) {
       console.log(
-        chalk.red("No subnets found in this VPC. Please create a subnet first.")
+        "No subnets found in this VPC. Please create a subnet first."
       );
       return;
     }
@@ -51,7 +42,7 @@ export default async function createEC2Instance() {
       {
         type: "list",
         name: "subnetId",
-        message: chalk.yellow("Select a Subnet:"),
+        message: "Select a Subnet:",
         choices: subnets.map((subnet) => ({
           name: `${subnet.Name || "Unnamed Subnet"} (${subnet.SubnetId})`,
           value: subnet.SubnetId,
@@ -62,9 +53,7 @@ export default async function createEC2Instance() {
     // Prompt for Key Pair
     const keyPairs = await getKeyPairs();
     if (keyPairs.length === 0) {
-      console.log(
-        chalk.red("No Key Pairs found. Please create a Key Pair first.")
-      );
+      console.log("No Key Pairs found. Please create a Key Pair first.");
       return;
     }
 
@@ -72,7 +61,7 @@ export default async function createEC2Instance() {
       {
         type: "list",
         name: "keyName",
-        message: chalk.yellow("Select a Key Pair:"),
+        message: "Select a Key Pair:",
         choices: keyPairs,
       },
     ]);
@@ -82,7 +71,7 @@ export default async function createEC2Instance() {
       {
         type: "list",
         name: "amiChoice",
-        message: chalk.yellow("Select an AMI:"),
+        message: "Select an AMI:",
         choices: [
           "Amazon Linux 2",
           "Ubuntu Server 20.04 LTS",
@@ -99,22 +88,16 @@ export default async function createEC2Instance() {
         {
           type: "input",
           name: "customAmiId",
-          message: chalk.yellow("Enter the AMI ID:"),
+          message: "Enter the AMI ID:",
           validate: (input) => (input ? true : "AMI ID cannot be empty."),
         },
       ]);
       amiId = customAmiId;
     } else {
-      const spinner = ora("Fetching latest AMI ID...").start();
       amiId = await getLatestAmiIdForOs(amiChoice);
-      spinner.stop();
       if (!amiId) {
-        console.log(
-          chalk.red(`Could not retrieve the AMI ID for ${amiChoice}.`)
-        );
+        console.log(`Could not retrieve the AMI ID for ${amiChoice}.`);
         return;
-      } else {
-        console.log(chalk.green(`Using AMI ID: ${amiId}`));
       }
     }
 
@@ -122,9 +105,7 @@ export default async function createEC2Instance() {
     const securityGroups = await getSecurityGroups(vpcId);
     if (securityGroups.length === 0) {
       console.log(
-        chalk.red(
-          "No Security Groups found. Please create a Security Group first."
-        )
+        "No Security Groups found. Please create a Security Group first."
       );
       return;
     }
@@ -133,7 +114,7 @@ export default async function createEC2Instance() {
       {
         type: "list",
         name: "securityGroupId",
-        message: chalk.yellow("Select a Security Group:"),
+        message: "Select a Security Group:",
         choices: securityGroups.map((sg) => ({
           name: `${sg.GroupName} (${sg.GroupId})`,
           value: sg.GroupId,
@@ -146,14 +127,14 @@ export default async function createEC2Instance() {
       {
         type: "input",
         name: "instanceName",
-        message: chalk.yellow("Enter a name for the EC2 instance:"),
+        message: "Enter a name for the EC2 instance:",
         validate: (input) => (input ? true : "Instance name cannot be empty."),
       },
     ]);
 
     // Launch EC2 Instance with public IP address
-    const spinner = ora("Launching EC2 Instance...").start();
-    let instanceId = await $`aws ec2 run-instances \
+    console.log("\nLaunching EC2 Instance...");
+    let instanceIdResult = await $`aws ec2 run-instances \
       --image-id ${amiId} \
       --count 1 \
       --instance-type t2.micro \
@@ -164,18 +145,13 @@ export default async function createEC2Instance() {
       --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=${instanceName}}]' \
       --query 'Instances[0].InstanceId' \
       --output text`;
-    instanceId = instanceId.stdout.trim();
-    spinner.succeed(chalk.green(`Instance ID: ${instanceId}`));
+    let instanceId = instanceIdResult.stdout.trim();
+    console.log(`Instance ID: ${instanceId}`);
 
-    const waitSpinner = ora(
-      "Waiting for the instance to enter the running state..."
-    ).start();
+    console.log("\nWaiting for the instance to enter the running state...");
     await $`aws ec2 wait instance-running --instance-ids ${instanceId}`;
-    waitSpinner.succeed(chalk.green("Instance is now running."));
+    console.log("Instance is now running.");
   } catch (error) {
-    throw new AwsCliError(
-      "Error launching EC2 Instance",
-      error.stderr || error.message
-    );
+    throw new AwsCliError("Error launching EC2 Instance", error.stderr || error.message);
   }
 }

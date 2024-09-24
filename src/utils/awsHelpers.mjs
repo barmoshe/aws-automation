@@ -1,12 +1,26 @@
-import { $, question } from "zx";
-import { AwsCliError } from "./errorHandlers.js";
-import net from "net";
+import { $, ProcessOutput } from 'zx';
+
+export { $ };
+
+export class AwsCliError extends Error {
+  constructor(message, stderr) {
+    super(message);
+    this.name = "AwsCliError";
+    this.stderr = stderr;
+  }
+}
+
+export class ValidationError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
+}
 
 // Helper Function: Get VPCs
 export async function getVPCs() {
   try {
-    const result =
-      await $`aws ec2 describe-vpcs --query 'Vpcs[*].{VpcId:VpcId,Name:Tags[?Key==\`Name\`]|[0].Value}' --output json`;
+    const result = await $`aws ec2 describe-vpcs --query 'Vpcs[*].{VpcId:VpcId,Name:Tags[?Key==\`Name\`]|[0].Value}' --output json`;
     return JSON.parse(result.stdout);
   } catch (error) {
     throw new AwsCliError("Error fetching VPCs", error.stderr || error.message);
@@ -85,6 +99,22 @@ export async function getVolumes() {
   } catch (error) {
     throw new AwsCliError(
       "Error fetching EBS Volumes",
+      error.stderr || error.message
+    );
+  }
+}
+
+// Helper Function: Get Snapshots
+export async function getSnapshots() {
+  try {
+    const result = await $`aws ec2 describe-snapshots \
+      --owner-ids self \
+      --query 'Snapshots[*].{SnapshotId:SnapshotId,StartTime:StartTime,Name:Tags[?Key==\`Name\`]|[0].Value}' \
+      --output json`;
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new AwsCliError(
+      "Error fetching Snapshots",
       error.stderr || error.message
     );
   }
