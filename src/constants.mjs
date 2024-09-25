@@ -3,7 +3,7 @@ export const choices = [
   "2. Create an EC2 machine and attach key pairs",
   "3. Configure security group for SSH access",
   "4. SSH into the machine",
-  "5. Attach an EBS volume to the machine",
+  "5. Attach an EBS volume to the machine/launch template",
   "6. Create a Snapshot",
   "7. Create Launch Template",
   "8. Create Auto Scaling Group", // New option

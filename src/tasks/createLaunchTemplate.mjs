@@ -120,28 +120,78 @@ export async function createLaunchTemplate() {
       },
     ]);
 
+    // Prompt for EBS Volume (size, type, and delete on termination)
+    const { addEbsVolume } = await inquirer.prompt([
+      {
+        type: "confirm",
+        name: "addEbsVolume",
+        message: "Would you like to add an EBS volume to the template?",
+        default: false,
+      },
+    ]);
+
+    let ebsBlockDeviceMapping = '';
+    if (addEbsVolume) {
+      const { volumeSize, volumeType, deleteOnTermination } = await inquirer.prompt([
+        {
+          type: "input",
+          name: "volumeSize",
+          message: "Enter the size of the EBS volume (in GiB):",
+          validate: (input) => input && !isNaN(input) ? true : "Please enter a valid number.",
+        },
+        {
+          type: "list",
+          name: "volumeType",
+          message: "Select the EBS volume type:",
+          choices: ["gp2", "gp3", "io1", "io2", "sc1", "st1"],
+        },
+        {
+          type: "confirm",
+          name: "deleteOnTermination",
+          message: "Should the volume be deleted on instance termination?",
+          default: true,
+        },
+      ]);
+
+      // Properly format the BlockDeviceMappings JSON
+      ebsBlockDeviceMapping = `
+        "BlockDeviceMappings": [
+          {
+            "DeviceName": "/dev/sdh",
+            "Ebs": {
+              "VolumeSize": ${volumeSize},
+              "VolumeType": "${volumeType}",
+              "DeleteOnTermination": ${deleteOnTermination}
+            }
+          }
+        ]`;
+    }
+
     // Hard-coded instance type (t2.micro)
     const instanceType = "t2.micro";
 
-    // Use AWS CLI to create the Launch Template, including the DeviceIndex
+    // Build the launch template data object
+    const launchTemplateData = `
+    {
+      "ImageId": "${amiId}",
+      "InstanceType": "${instanceType}",
+      "KeyName": "${keyName}",
+      "NetworkInterfaces": [
+        {
+          "DeviceIndex": 0,  
+          "AssociatePublicIpAddress": true,
+          "SubnetId": "${subnetId}",
+          "Groups": ["${securityGroupId}"]
+        }
+      ]${ebsBlockDeviceMapping ? ',' + ebsBlockDeviceMapping : ''}
+    }`;
+
+    // Use AWS CLI to create the Launch Template
     console.log("\nCreating Launch Template...");
     await $`aws ec2 create-launch-template \
       --launch-template-name ${templateName} \
       --version-description ${templateVersionDescription || "Default version"} \
-      --launch-template-data '{
-        "ImageId": "${amiId}",
-        "InstanceType": "${instanceType}",
-        "KeyName": "${keyName}",
-        "NetworkInterfaces": [
-          {
-            "DeviceIndex": 0,  
-            "AssociatePublicIpAddress": true,
-            "SubnetId": "${subnetId}",
-            "Groups": ["${securityGroupId}"],
-            "AssociatePublicIpAddress": true 
-          }
-        ]
-      }'`;
+      --launch-template-data ${launchTemplateData}`;
 
     console.log(`Launch template "${templateName}" created successfully.`);
   } catch (error) {
