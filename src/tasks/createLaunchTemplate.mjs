@@ -79,7 +79,7 @@ export async function createLaunchTemplate() {
     ]);
 
     // Select a VPC
-    let vpcs = await getVPCs();
+    const vpcs = await getVPCs();
     const { vpcId } = await inquirer.prompt([
       {
         type: "list",
@@ -93,7 +93,7 @@ export async function createLaunchTemplate() {
     ]);
 
     // Select a Subnet
-    let subnets = await getSubnets(vpcId);
+    const subnets = await getSubnets(vpcId);
     const { subnetId } = await inquirer.prompt([
       {
         type: "list",
@@ -123,7 +123,7 @@ export async function createLaunchTemplate() {
     // Hard-coded instance type (t2.micro)
     const instanceType = "t2.micro";
 
-    // Use AWS CLI to create the Launch Template
+    // Use AWS CLI to create the Launch Template, including the DeviceIndex
     console.log("\nCreating Launch Template...");
     await $`aws ec2 create-launch-template \
       --launch-template-name ${templateName} \
@@ -134,6 +134,7 @@ export async function createLaunchTemplate() {
         "KeyName": "${keyName}",
         "NetworkInterfaces": [
           {
+            "DeviceIndex": 0,  
             "AssociatePublicIpAddress": true,
             "SubnetId": "${subnetId}",
             "Groups": ["${securityGroupId}"]

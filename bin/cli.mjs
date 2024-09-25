@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import inquirer from 'inquirer';
-import { mainMenu } from '../src/tasks/mainMenu.mjs';
-import { handleError } from '../src/utils/errorHandlers.mjs';
+import inquirer from "inquirer";
+import { mainMenu } from "../src/tasks/mainMenu.mjs";
+import { handleError } from "../src/utils/errorHandlers.mjs";
 
 (async () => {
   try {
