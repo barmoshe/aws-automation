@@ -10,7 +10,7 @@ Welcome to the **AWS Automation Script**, a Node.js CLI tool designed to streaml
 - **Launch EC2 Instances**: Easily launch EC2 instances with customizable configurations.
 - **Configure Security Groups**: Set up security groups to manage SSH access.
 - **SSH into Instances**: Seamlessly connect to your EC2 instances via SSH.
-- **Attach EBS Volumes**: Add additional storage to your EC2 instances with EBS volumes/launch templates.
+- **Attach EBS Volumes**: Add additional storage to your EC2 instances with EBS volumes.
 - **Create Snapshots**: Backup your EBS volumes by creating snapshots.
 - **Create Launch Templates**: Define configurations to be reused for Auto Scaling Groups and other resources.
 - **Create Auto Scaling Groups**: Automatically manage the number of EC2 instances in a group based on scaling policies.
