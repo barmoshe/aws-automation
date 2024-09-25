@@ -137,7 +137,8 @@ export async function createLaunchTemplate() {
             "DeviceIndex": 0,  
             "AssociatePublicIpAddress": true,
             "SubnetId": "${subnetId}",
-            "Groups": ["${securityGroupId}"]
+            "Groups": ["${securityGroupId}"],
+            "AssociatePublicIpAddress": true 
           }
         ]
       }'`;

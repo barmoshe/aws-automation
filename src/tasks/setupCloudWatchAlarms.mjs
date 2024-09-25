@@ -29,6 +29,45 @@ export async function setupCloudWatchAlarms() {
       },
     ]);
 
+    // Fetch existing scaling policies for the selected Auto Scaling Group
+    const scalingPoliciesResult = await $`aws autoscaling describe-policies \
+      --auto-scaling-group-name ${groupName} \
+      --query 'ScalingPolicies[*].{PolicyName:PolicyName,PolicyARN:PolicyARN}' \
+      --output json`;
+    const scalingPolicies = JSON.parse(scalingPoliciesResult.stdout);
+
+    if (scalingPolicies.length === 0) {
+      throw new AwsCliError(
+        "No scaling policies found for the selected Auto Scaling Group."
+      );
+    }
+
+    // Prompt user to select a scaling policy for scaling up
+    const { scaleUpPolicyArn } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "scaleUpPolicyArn",
+        message: "Select a scaling policy for scaling up:",
+        choices: scalingPolicies.map((policy) => ({
+          name: policy.PolicyName,
+          value: policy.PolicyARN,
+        })),
+      },
+    ]);
+
+    // Prompt user to select a scaling policy for scaling down
+    const { scaleDownPolicyArn } = await inquirer.prompt([
+      {
+        type: "list",
+        name: "scaleDownPolicyArn",
+        message: "Select a scaling policy for scaling down:",
+        choices: scalingPolicies.map((policy) => ({
+          name: policy.PolicyName,
+          value: policy.PolicyARN,
+        })),
+      },
+    ]);
+
     // Prompt for CPU Utilization thresholds
     const { scaleUpThreshold, scaleDownThreshold } = await inquirer.prompt([
       {
@@ -50,36 +89,35 @@ export async function setupCloudWatchAlarms() {
     ]);
 
     const region = "eu-west-1"; // Set your desired region here
-
+    console.log("\nSetting up CloudWatch Alarms...");
     // Alarm for CPU > Scale Up Threshold
     await $`aws cloudwatch put-metric-alarm \
-      --alarm-name ScaleUpAlarm-${groupName} \
-      --metric-name CPUUtilization \
-      --namespace AWS/EC2 \
-      --statistic Average \
-      --period 300 \
-      --threshold ${scaleUpThreshold} \
-      --comparison-operator GreaterThanThreshold \
-      --dimensions "Name=AutoScalingGroupName,Value=${groupName}" \
-      --evaluation-periods 2 \
-      --alarm-actions arn:aws:autoscaling:${region}:${accountId}:scalingPolicy:policy-id:autoScalingGroupName/${groupName}:policyName/ScaleUpPolicy \
-      --region ${region}`;
+    --alarm-name ScaleUpAlarm-${groupName} \
+    --metric-name CPUUtilization \
+    --namespace AWS/EC2 \
+    --statistic Average \
+    --period 300 \
+    --threshold ${scaleUpThreshold} \
+    --comparison-operator GreaterThanThreshold \
+    --evaluation-periods 2 \
+    --alarm-actions ${scaleUpPolicyArn} \
+    --dimensions "Name=AutoScalingGroupName,Value=${groupName}" \
+    --region ${region}`;
 
-    // Alarm for CPU < Scale Down Threshold
     await $`aws cloudwatch put-metric-alarm \
-      --alarm-name ScaleDownAlarm-${groupName} \
-      --metric-name CPUUtilization \
-      --namespace AWS/EC2 \
-      --statistic Average \
-      --period 300 \
-      --threshold ${scaleDownThreshold} \
-      --comparison-operator LessThanThreshold \
-      --dimensions "Name=AutoScalingGroupName,Value=${groupName}" \
-      --evaluation-periods 2 \
-      --alarm-actions arn:aws:autoscaling:${region}:${accountId}:scalingPolicy:policy-id:autoScalingGroupName/${groupName}:policyName/ScaleDownPolicy \
-      --region ${region}`;
+    --alarm-name ScaleDownAlarm-${groupName} \
+    --metric-name CPUUtilization \
+    --namespace AWS/EC2 \
+    --statistic Average \
+    --period 300 \
+    --threshold ${scaleDownThreshold} \
+    --comparison-operator LessThanThreshold \
+    --evaluation-periods 2 \
+    --alarm-actions ${scaleDownPolicyArn} \
+    --dimensions "Name=AutoScalingGroupName,Value=${groupName}" \
+    --region ${region}`;
 
-    console.log("CloudWatch Alarms set up successfully.");
+    console.log("CloudWatch Alarm2 set up successfully.");
   } catch (error) {
     throw new AwsCliError(
       "Error setting up CloudWatch Alarms",

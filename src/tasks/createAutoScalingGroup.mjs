@@ -115,22 +115,17 @@ export async function createAutoScalingGroup() {
     ]);
 
     console.log("\nCreating Auto Scaling Group...");
-    //log the command to be executed
-    console.log(`aws autoscaling create-auto-scaling-group \
-      --auto-scaling-group-name ${groupName} \
-      --min-size ${minSize} \
-      --max-size ${maxSize} \
-      --desired-capacity ${desiredCapacity} \
-      --launch-template LaunchTemplateId=${launchTemplateId} \
-      --vpc-zone-identifier ${subnetId}`);
 
+    // Use AWS CLI to create Auto Scaling Group with instance name tags
     await $`aws autoscaling create-auto-scaling-group \
       --auto-scaling-group-name ${groupName} \
       --min-size ${minSize} \
       --max-size ${maxSize} \
       --desired-capacity ${desiredCapacity} \
       --launch-template LaunchTemplateId=${launchTemplateId} \
-      --vpc-zone-identifier ${subnetId}`;
+      --vpc-zone-identifier ${subnetId} \
+      --tags Key=Name,Value=${groupName}-instance-\${aws:instance-id},PropagateAtLaunch=true`;
+
     console.log("Auto Scaling Group created successfully.");
   } catch (error) {
     throw new AwsCliError(
