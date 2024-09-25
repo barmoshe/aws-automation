@@ -152,6 +152,14 @@ aws cloudwatch put-metric-alarm \
   --evaluation-periods 2
 ```
 
+## bonus assignment 
+Please create a scaling solution for ec2 instances following the next conditions :
+If the instance cpu is higher then 75%, scale up
+If the instance is less then 30 % , scale down
+
+<img width="738" alt="Screenshot 2024-09-25 at 16 27 14" src="https://github.com/user-attachments/assets/c26cd38e-bf05-4d54-b229-66de1588f23f">
+
+
 ## Configuration
 
 The CLI tool can be customized using environment variables or configuration files. Ensure that your AWS CLI is configured with the correct region and credentials.
