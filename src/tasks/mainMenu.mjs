@@ -8,35 +8,16 @@ import { createSnapshot } from "./createSnapshot.mjs";
 import { createLaunchTemplate } from "./createLaunchTemplate.mjs";
 import { choices } from "../constants.mjs";
 import { handleError } from "../utils/errorHandlers.mjs";
-import { $, AwsCliError } from "../utils/awsHelpers.mjs";  // Assuming $ is from zx for shell commands
+import { $, AwsCliError } from "../utils/awsHelpers.mjs"; // Assuming $ is from zx for shell commands
+import { createAutoScalingGroup } from "./createAutoScalingGroup.mjs";
+import { createScalingPolicy } from "./createScalingPolicy.mjs";
+import { setupCloudWatchAlarms } from "./setupCloudWatchAlarms.mjs";
 
 export async function mainMenu() {
   try {
-    // Initial prompt to ask if user wants to configure AWS
-    const { runAwsConfigure } = await inquirer.prompt([
-      {
-        type: "confirm",
-        name: "runAwsConfigure",
-        message: "Do you want to configure AWS credentials now?",
-        default: false,
-      },
-    ]);
-
-    // Run `aws configure` if the user chooses to
-    if (runAwsConfigure) {
-      try {
-        await $`aws configure`;
-        console.log("AWS configuration completed.");
-      } catch (error) {
-        throw new AwsCliError("Error running aws configure", error.stderr || error.message);
-      }
-    }
-
-    // Modify the choices to include "AWS Configure" before the exit option
     const menuChoices = [...choices];
-    menuChoices.splice(menuChoices.length - 1, 0, "Configure AWS Credentials"); // Add above the last option (Exit)
+    menuChoices.splice(menuChoices.length - 1, 0, "Configure AWS Credentials");
 
-    // Main menu prompt
     const answer = await inquirer.prompt([
       {
         type: "list",
@@ -68,21 +49,31 @@ export async function mainMenu() {
       case choices[6]:
         await createLaunchTemplate();
         break;
+      case choices[7]:
+        await createAutoScalingGroup();
+        break;
+      case choices[8]:
+        await createScalingPolicy();
+        break;
+      case choices[9]:
+        await setupCloudWatchAlarms();
+        break;
       case "Configure AWS Credentials":
         try {
-          await $`aws configure`;  // Run aws configure if selected from the menu
+          await $`aws configure`;
           console.log("AWS configuration completed.");
         } catch (error) {
-          throw new AwsCliError("Error running aws configure", error.stderr || error.message);
+          throw new AwsCliError(
+            "Error running aws configure",
+            error.stderr || error.message
+          );
         }
         break;
-
       default:
         console.log("Exiting...");
         process.exit(0);
     }
 
-    // Return to main menu after task completion
     await mainMenu();
   } catch (error) {
     handleError(error);

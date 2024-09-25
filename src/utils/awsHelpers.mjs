@@ -1,4 +1,4 @@
-import { $, ProcessOutput } from 'zx';
+import { $, ProcessOutput } from "zx";
 
 export { $ };
 
@@ -9,6 +9,18 @@ export class AwsCliError extends Error {
     this.stderr = stderr;
   }
 }
+export async function getAutoScalingGroups() {
+  try {
+    const result =
+      await $`aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[*].{AutoScalingGroupName:AutoScalingGroupName}' --output json`;
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new AwsCliError(
+      "Error fetching Auto Scaling Groups",
+      error.stderr || error.message
+    );
+  }
+}
 
 export class ValidationError extends Error {
   constructor(message) {
@@ -16,11 +28,24 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+export async function getLaunchTemplates() {
+  try {
+    const result =
+      await $`aws ec2 describe-launch-templates --query 'LaunchTemplates[*].{LaunchTemplateName:LaunchTemplateName,LaunchTemplateId:LaunchTemplateId,LatestVersionNumber:LatestVersionNumber}' --output json`;
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    throw new AwsCliError(
+      "Error fetching Launch Templates",
+      error.stderr || error.message
+    );
+  }
+}
 
 // Helper Function: Get VPCs
 export async function getVPCs() {
   try {
-    const result = await $`aws ec2 describe-vpcs --query 'Vpcs[*].{VpcId:VpcId,Name:Tags[?Key==\`Name\`]|[0].Value}' --output json`;
+    const result =
+      await $`aws ec2 describe-vpcs --query 'Vpcs[*].{VpcId:VpcId,Name:Tags[?Key==\`Name\`]|[0].Value}' --output json`;
     return JSON.parse(result.stdout);
   } catch (error) {
     throw new AwsCliError("Error fetching VPCs", error.stderr || error.message);
