@@ -187,3 +187,16 @@ export async function getLatestAmiIdForOs(osChoice) {
     );
   }
 }
+export async function getDefaultSecurityGroup(vpcId) {
+  try {
+    const result = await $`aws ec2 describe-security-groups \
+      --filters Name=vpc-id,Values=${vpcId} Name=group-name,Values=default \
+      --query 'SecurityGroups[0]' \
+      --output json`;
+
+    return JSON.parse(result.stdout);
+  } catch (error) {
+    console.error("Error fetching default Security Group:", error);
+    return null;
+  }
+}

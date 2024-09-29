@@ -1,6 +1,6 @@
 import inquirer from 'inquirer';
 import fs from 'fs';
-import { $, AwsCliError, getVPCs, getSubnets, getKeyPairs, getSecurityGroups, getLatestAmiIdForOs } from '../utils/awsHelpers.mjs';
+import { $, AwsCliError, getVPCs, getSubnets, getKeyPairs, getSecurityGroups, getDefaultSecurityGroup, getLatestAmiIdForOs } from '../utils/awsHelpers.mjs';
 
 export async function createEC2Instance() {
   console.log("\n=== Create EC2 Instance ===");
@@ -101,26 +101,53 @@ export async function createEC2Instance() {
       }
     }
 
-    // Prompt for Security Group
-    const securityGroups = await getSecurityGroups(vpcId);
-    if (securityGroups.length === 0) {
-      console.log(
-        "No Security Groups found. Please create a Security Group first."
-      );
-      return;
-    }
-
-    const { securityGroupId } = await inquirer.prompt([
+    // Prompt to choose between custom or default Security Group
+    const { useCustomSecurityGroup } = await inquirer.prompt([
       {
-        type: "list",
-        name: "securityGroupId",
-        message: "Select a Security Group:",
-        choices: securityGroups.map((sg) => ({
-          name: `${sg.GroupName} (${sg.GroupId})`,
-          value: sg.GroupId,
-        })),
+        type: "confirm",
+        name: "useCustomSecurityGroup",
+        message: "Do you want to use a custom Security Group?",
+        default: false,
       },
     ]);
+
+    let securityGroupId;
+
+    if (useCustomSecurityGroup) {
+      // Prompt for Security Group if user wants to use a custom one
+      const securityGroups = await getSecurityGroups(vpcId);
+      if (securityGroups.length === 0) {
+        console.log(
+          "No Security Groups found. Please create a Security Group first."
+        );
+        return;
+      }
+
+      const { selectedSecurityGroupId } = await inquirer.prompt([
+        {
+          type: "list",
+          name: "selectedSecurityGroupId",
+          message: "Select a Security Group:",
+          choices: securityGroups.map((sg) => ({
+            name: `${sg.GroupName} (${sg.GroupId})`,
+            value: sg.GroupId,
+          })),
+        },
+      ]);
+
+      securityGroupId = selectedSecurityGroupId;
+    } else {
+      // Retrieve the default Security Group for the selected VPC
+      const defaultSecurityGroup = await getDefaultSecurityGroup(vpcId);
+      if (!defaultSecurityGroup) {
+        console.log(
+          "Default Security Group not found for this VPC. Please ensure a default Security Group exists."
+        );
+        return;
+      }
+      securityGroupId = defaultSecurityGroup.GroupId;
+      console.log(`Using default Security Group: ${defaultSecurityGroup.GroupName} (${securityGroupId})`);
+    }
 
     // Prompt for Instance Name
     const { instanceName } = await inquirer.prompt([
