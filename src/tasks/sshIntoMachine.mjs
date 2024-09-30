@@ -107,7 +107,9 @@ export async function sshIntoMachine() {
         // Handle errors
         sshProcess.on("error", (error) => {
           console.error(`\nFailed to start SSH process: ${error.message}`);
-          reject(new AwsCliError(`Failed to start SSH process: ${error.message}`));
+          reject(
+            new AwsCliError(`Failed to start SSH process: ${error.message}`)
+          );
         });
       });
     }
